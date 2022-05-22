@@ -164,17 +164,18 @@ def rotate(array=[], n=0):
   
 class AES:
   KEY = "Thats my Kung Fu"
-  PLAIN_TEXT = "Two One Nine Two"
-
   w = []     #2D array
   state_matrix = []
 
   def print_state(self):
     print_bv_matrix(self.state_matrix)
   
-  def text_to_hex_matrix(self, text):
+  def text_to_hex(self, text):
     val = BitVector(textstring=text)
     hex_value = val.get_bitvector_in_hex();
+    return hex_value
+
+  def hex_to_matrix(self, hex_value):
     array = []
 
     for i in range(4):
@@ -213,7 +214,8 @@ class AES:
     return row_temp
 
   def key_expansion(self):
-    self.w = self.text_to_hex_matrix(self.KEY);
+    hex_key = self.text_to_hex(self.KEY)
+    self.w = self.hex_to_matrix(hex_key);
     
     round_count = 0
     for i in range(4, 4*TOTAL_ROUND+4):
@@ -224,26 +226,37 @@ class AES:
       else:
         temp = array_xor(self.w[i-1], self.w[i-4])
       self.w.append(temp)
+    # for i in range(TOTAL_ROUND+1):
+    #   print(self.hex_matrix_to_text(self.get_key(i)))
 
-  def create_state_matrix(self):
-    self.state_matrix = self.text_to_hex_matrix(self.PLAIN_TEXT)
+  def create_state_matrix(self, hex_value):
+    self.state_matrix = self.hex_to_matrix(hex_value)
     transpose(self.state_matrix)
 
-  def first_round(self):
+  def en_first_round(self):
     key_matrix = self.get_key(0)
     for i in range(4):
         self.state_matrix[i] = array_xor(self.state_matrix[i], key_matrix[i])
     
     
 
-  def substitution_bytes(self):
+  def sub_bytes(self):
     for i in range(4):
       for j in range(4):
         self.state_matrix[i][j] = BitVector(intVal=Sbox[self.state_matrix[i][j].intValue()], size=8)
 
+  def inv_sub_bytes(self):
+    for i in range(4):
+      for j in range(4):
+        self.state_matrix[i][j] = BitVector(intVal=InvSbox[self.state_matrix[i][j].intValue()], size=8)
+
   def shift_row(self):
     for i in range(4):
       rotate(self.state_matrix[i], -i)
+      
+  def inv_shift_row(self):
+    for i in range(4):
+      rotate(self.state_matrix[i], i)
 
   def mix_column(self):
     temp_matrix = copy.deepcopy(self.state_matrix)
@@ -253,18 +266,15 @@ class AES:
         for k in range(4):
           sum = sum ^ (Mixer[i][k].gf_multiply_modular(temp_matrix[k][j], AES_modulus, 8))
         self.state_matrix[i][j] = sum
-
-  # def create_round_key(self, round_count):
-  #   w = []
-  #   transpose(self.key_matrix)
-  #   # print_bv_array(self.key_matrix[3])
-  #   temp = array_xor(self.key_matrix[0], self.g(self.key_matrix[3], round_count=round_count))
-  #   w.append(temp);
-  #   for i in range(3):
-  #     temp = array_xor(self.key_matrix[i+1], w[i])
-  #     w.append(temp)
-  #   self.key_matrix = w.copy()
-  #   transpose(self.key_matrix)
+        
+  def inv_mix_column(self):
+    temp_matrix = copy.deepcopy(self.state_matrix)
+    for i in range(4):
+      for j in range(4):
+        sum = BitVector(intVal=0, size=8)
+        for k in range(4):
+          sum = sum ^ (InvMixer[i][k].gf_multiply_modular(temp_matrix[k][j], AES_modulus, 8))
+        self.state_matrix[i][j] = sum
   
   def add_round_key(self, round_count):
     key_matrix = self.get_key(round_count)
@@ -273,33 +283,45 @@ class AES:
       # for j in range(4):
       #   self.state_matrix[i][j] = self.state_matrix[i][j] ^ key_matrix[i][j]
 
-  def round(self, round_count):
-    self.substitution_bytes()
-    self.shift_row()
-    self.mix_column()
-    self.add_round_key(round_count)
-    print("Round ", round_count)
-    self.print_state()
-  
-  def last_round(self):
-    self.substitution_bytes()
-    self.shift_row()
-    self.add_round_key(TOTAL_ROUND)
 
-  def encrypt(self):
-    self.create_state_matrix()
+  def encrypt(self, plain_text):
+    text_hex = self.text_to_hex(plain_text)
+    self.create_state_matrix(text_hex)
     self.key_expansion()
-    self.first_round()
-    for i in range(1,TOTAL_ROUND):
-      self.round(i)
-    self.last_round()
-    print("final encrypt matrix")
-    print_bv_matrix(self.state_matrix)
+    self.en_first_round()
+    for i in range(1, TOTAL_ROUND+1):
+      self.sub_bytes()
+      self.shift_row()
+      if(i != TOTAL_ROUND):
+         self.mix_column()
+      self.add_round_key(i)
+    
     transpose(self.state_matrix)
-    print(self.hex_matrix_to_text(self.state_matrix))
+    return self.hex_matrix_to_text(self.state_matrix)
 
+  def decrypt(self, encrypted_text):
+    self.create_state_matrix(encrypted_text)
+    self.key_expansion()
+    self.add_round_key(TOTAL_ROUND)
+    for i in reversed(range(0, TOTAL_ROUND)):
+      self.inv_shift_row()
+      self.inv_sub_bytes()
+      self.add_round_key(i)
+      if i!=0:
+        self.inv_mix_column()
+        
+    print("plain text")
+    transpose(self.state_matrix)
+    dec_hex = self.hex_matrix_to_text(self.state_matrix)
+    bv = BitVector(hexstring=dec_hex)
+    return bv.get_bitvector_in_ascii()
 
-aes = AES();
-aes.encrypt()
+PLAIN_TEXT = "Two One Nine Two"
+aes_encrypt = AES();
+encrypted_text = aes_encrypt.encrypt(PLAIN_TEXT)
+print(encrypted_text)
 
+aes_decrypt = AES();
+ptext = aes_decrypt.decrypt(encrypted_text)
+print(ptext)
 
