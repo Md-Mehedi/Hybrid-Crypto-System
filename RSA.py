@@ -2,14 +2,7 @@
 ##----------------------------- Imports ----------------------------##
 ##------------------------------------------------------------------##
 
-import copy
-import numbers
-import random
-from array import array
-from asyncio import tasks
-from collections import deque
 from math import gcd
-from posixpath import split
 from typing import List
 
 from BitVector import *
@@ -80,17 +73,26 @@ class RSA:
 
   def get_e(self, phi:int):
     """ Return e such that 1<e<phi and be a coprime with phi """
-    for e in range(13, phi):
+    for e in range(2, phi):
       if gcd(e, phi) == 1:
         return e
+
+  def get_public_key(self) -> List:
+    return self.public_key
+
+  def get_private_key(self) -> List:
+    return self.private_key
+
+  def set_private_key(self, d:int, n:int) -> None:
+    self.private_key = [int(d), int(n)]
   
   def generate_prime(self):
     """ Generate two prime number p and q by using Prime class """
     prime = Prime()
-    self.prime_p = prime.get_prime_of_bit(self.KEY_BIT_COUNT)
-    self.prime_q = prime.get_prime_of_bit(self.KEY_BIT_COUNT)
+    self.prime_p = prime.get_prime_of_bit(self.KEY_BIT_COUNT/2)
+    self.prime_q = prime.get_prime_of_bit(self.KEY_BIT_COUNT/2)
     while self.prime_p == self.prime_q:
-      self.prime_q = prime.get_prime_of_bit(self.KEY_BIT_COUNT)
+      self.prime_q = prime.get_prime_of_bit(self.KEY_BIT_COUNT/2)
     
   def key_generation(self):
     """ 
@@ -137,6 +139,7 @@ class RSA:
     decrypted_text = ""
     for value in numbers:
       if value != "":
+        # print("value : ",exponential_mod(int(value), self.private_key[0], self.private_key[1]))
         decrypted_text += chr(exponential_mod(int(value), self.private_key[0], self.private_key[1]))
     return decrypted_text
 
