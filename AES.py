@@ -147,6 +147,7 @@ def rotate(array: List, n: int) -> None:
 ######################################################################
 ##------------------------- Class Definition -----------------------##
 ##------------------------------------------------------------------##
+
 class AES:
   KEY:str = ""      # Default Key
   w:List[List[BitVector]] = []     #2D array
@@ -340,7 +341,7 @@ class AES:
 ##--------------------------- Testing Code -------------------------##
 ##------------------------------------------------------------------##
 
-TESTING = True
+TESTING = False
 
 if TESTING :
   PLAIN_TEXT = "Hello!!! Now text can be Encrypt and Decrypt by AES class"
