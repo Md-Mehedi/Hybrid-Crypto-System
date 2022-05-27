@@ -2,6 +2,7 @@
 ##----------------------------- Imports ----------------------------##
 ##------------------------------------------------------------------##
 
+from pathlib import Path
 from typing import List
 
 from BitVector import *
@@ -71,8 +72,18 @@ TESTING = True
 DEBUG = False
 
 if TESTING :
-  RSA_KEY_BIT = 128
+  RSA_KEY_BIT = 16
   PLAIN_TEXT = "Hello!!! Now text can be Encrypt and Decrypt by Hybrid Crypto System class"
+  
+  # base_path = Path(__file__).parent
+  # file_path = (base_path/"1.jpg").resolve()
+  # with open(file_path, "rb") as image:
+  #   f = image.read()
+  #   b = bytearray(f)
+  #   PLAIN_TEXT = ""
+  #   for val in b:
+  #     PLAIN_TEXT += str(val)
+
   hcs = Hybrid_Crypto_System()
 
   print("Plain text     : " + PLAIN_TEXT)
