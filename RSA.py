@@ -6,9 +6,6 @@ import time
 from math import gcd
 from typing import List
 
-from BitVector import *
-
-from AES import AES
 from Prime import Prime
 
 ##------------------------------------------------------------------##
@@ -75,6 +72,7 @@ class RSA:
 
   def __init__(self, key_bit:int=16) -> None:
     self.KEY_BIT_COUNT = key_bit
+    self.key_generation()
 
   def get_e(self, phi:int):
     """ Return e such that 1<e<phi and be a coprime with phi """
@@ -118,7 +116,7 @@ class RSA:
     5.  Calculate d, such that e*d = 1 mod phi(n)
     6.  Public key: {e,n} and Private key: {d,n} 
     """
-    self.__key_generation_time = time.time_ns()
+    self.__key_generation_time = time.time()
     self.generate_prime()                         # # Select two prime numbers p and q 
     n = self.prime_p * self.prime_q               # Calculate n = p*q
     phi = (self.prime_p-1) * (self.prime_q-1)     # Calculate phi(n) = (p-1)*(q-1)
@@ -130,7 +128,7 @@ class RSA:
       d = d + phi
     self.public_key = [e, n]
     self.private_key = [d, n]
-    self.__key_generation_time = time.time_ns() - self.__key_generation_time
+    self.__key_generation_time = time.time() - self.__key_generation_time
     if DEBUG :                                    # Used for debugging purpose
       print("Prime -> P = ", self.prime_p)
       print("Prime -> Q = ", self.prime_q)
@@ -143,23 +141,22 @@ class RSA:
     
   def encrypt(self, plain_text:str):
     """ Return an encrypted string which contains number separating with space of corresponding character of 'plain_text' """
-    self.key_generation()
-    self.__encryption_time = time.time_ns()
+    self.__encryption_time = time.time()
     encrypted_text = ""
     for ch in plain_text:
       encrypted_text += str(exponential_mod(ord(ch), self.public_key[0], self.public_key[1])) + " "
-    self.__encryption_time = time.time_ns() - self.__encryption_time
+    self.__encryption_time = time.time() - self.__encryption_time
     return encrypted_text
 
   def decrypt(self, encrypted_text:str):
     """ Return decrypted plain text using private key generated with public key of encrypted text """
-    self.__decryption_time = time.time_ns()
+    self.__decryption_time = time.time()
     numbers = encrypted_text.split(" ")
     decrypted_text = ""
     for value in numbers:
       if value != "":
         decrypted_text += chr(exponential_mod(int(value), self.private_key[0], self.private_key[1]))
-    self.__decryption_time = time.time_ns() - self.__decryption_time
+    self.__decryption_time = time.time() - self.__decryption_time
     return decrypted_text
 
 ##------------------------------------------------------------------##
@@ -176,7 +173,7 @@ class RSA:
 DEBUG = False
 
 if DEBUG :
-  RSA_KEY_BIT = 1024
+  RSA_KEY_BIT = 128
   PLAIN_TEXT = "Hello!!! Now text can be Encrypt and Decrypt by RSA class"
   print("Plain text     : " + PLAIN_TEXT)
   rsa_encrypt = RSA(RSA_KEY_BIT);
@@ -190,14 +187,14 @@ if DEBUG :
 if __name__ == '__main__':
   print("Enter text : ")
   plain_text = input()
-  print("K\tKey-Generation\tEncryption\tDecryption")
+  print("K\tMatched\tKey-Generation\t\t\tEncryption\t\t\tDecryption")
   for K in {16, 32, 64, 128}:
     rsa = RSA(K)
     cipher_text = rsa.encrypt(plain_text)
     decipher_text = rsa.decrypt(cipher_text)
     # print("Cipher text : ", cipher_text)
     # print("Decipher text : ", decipher_text)
-    print(K, "\t", rsa.get_key_generation_time(), "\t\t", rsa.get_encryption_time(), "\t\t", rsa.get_decryption_time())
+    print(f"{K} \t{'Yes' if plain_text == decipher_text else 'No'}\t{rsa.get_key_generation_time()}\t\t{rsa.get_encryption_time()}\t\t{rsa.get_decryption_time()}")
 
 ##------------------------------------------------------------------##
 ##--------------------------- Testing Code -------------------------##

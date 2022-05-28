@@ -35,27 +35,48 @@ from RSA import RSA
 ##------------------------------------------------------------------##
 
 class Hybrid_Crypto_System:
-  aes:AES
-  rsa:RSA = RSA(16)
+  aes:AES = None
+  rsa:RSA = None
+  KEY = None
+  RSA_K = None
+
+  def __init__(self, rsa_k, key="Something used as key") -> None:
+    self.KEY = key
+    self.RSA_K = rsa_k
+    self.aes = AES(self.KEY)
+    self.rsa = RSA(self.RSA_K)
 
   def encrypt(self, plain_text:str) -> str:
-    KEY = "Two One Nine One"
-    self.aes = AES(KEY)
+    """ Return encrypted text and encrypted key as pair """
     cipher_text = self.aes.encrypt(plain_text)
-
-    self.rsa = RSA(RSA_KEY_BIT)
-    encrypted_key = self.rsa.encrypt(KEY)
+    encrypted_key = self.rsa.encrypt(self.KEY)
     return [cipher_text, encrypted_key]
+
+  # def encrypt_file(self, file_text:str)->str:
+  #   """ Return encrypted file as bytes and encrypted key as pair """
+  #   cipher_text = self.aes.encrypt_file(file_text)
+  #   encrypted_key = self.rsa.encrypt(self.KEY)
+  #   return [cipher_text, encrypted_key]
   
   def get_private_key(self):
     return self.rsa.get_private_key()
 
-  def decrypt(self, encrypted_text:str, encrypted_key:str, private_key:List):
-    self.rsa = RSA(RSA_KEY_BIT)
-    self.rsa.set_private_key(private_key[0], private_key[1])
+  def get_public_key(self):
+    return self.rsa.get_public_key()
+
+  def decrypt(self, encrypted_text:str, encrypted_key:str, d:int, n:int):
+    """ Return decrypted text and key. Argument (d,n) is the pair of private key of RSA """
+    self.rsa.set_private_key(d, n)
     plain_key = self.rsa.decrypt(encrypted_key)
     self.aes = AES(plain_key)
-    return self.aes.decrypt(encrypted_text)
+    return self.aes.decrypt(encrypted_text), plain_key
+
+  # def decrypt_file(self, encrypted_text:str, encrypted_key:str, d:int, n:int):
+  #   """ Return decrypted file as hex and key. Argument (d,n) is the pair of private key of RSA """
+  #   self.rsa.set_private_key(d, n)
+  #   plain_key = self.rsa.decrypt(encrypted_key)
+  #   self.aes = AES(plain_key)
+  #   return self.aes.decrypt_file(encrypted_text), plain_key
 
 ##------------------------------------------------------------------##
 ##------------------------- Class Definition -----------------------##
@@ -68,22 +89,10 @@ class Hybrid_Crypto_System:
 ##--------------------------- Testing Code -------------------------##
 ##------------------------------------------------------------------##
 
-TESTING = True
-DEBUG = False
-
-if TESTING :
+if __name__ == '__main__':
   RSA_KEY_BIT = 16
-  PLAIN_TEXT = "Hello!!! Now text can be Encrypt and Decrypt by Hybrid Crypto System class"
+  PLAIN_TEXT = "Lorem Ipsum is simply dummy text of the printing and typesetting industry."
   
-  # base_path = Path(__file__).parent
-  # file_path = (base_path/"1.jpg").resolve()
-  # with open(file_path, "rb") as image:
-  #   f = image.read()
-  #   b = bytearray(f)
-  #   PLAIN_TEXT = ""
-  #   for val in b:
-  #     PLAIN_TEXT += str(val)
-
   hcs = Hybrid_Crypto_System()
 
   print("Plain text     : " + PLAIN_TEXT)
@@ -92,10 +101,10 @@ if TESTING :
   print("Encrypted text : " + encrypted_text[0])
   print("Encrypted key  : " + encrypted_text[1])
 
-  private_key = hcs.get_private_key()
-  print("Private key    : ", private_key)
+  d, n = hcs.get_private_key()
+  print("Private key    : ", d, n)
 
-  decrypted_text = hcs.decrypt(encrypted_text[0], encrypted_text[1], private_key)
+  decrypted_text = hcs.decrypt(encrypted_text[0], encrypted_text[1], d, n)
   print("Decrypted text : " + decrypted_text)
 
 ##------------------------------------------------------------------##

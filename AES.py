@@ -9,6 +9,7 @@ import time
 from array import array
 from asyncio import tasks
 from collections import deque
+from pydoc import plain
 from typing import List
 
 from BitVector import *
@@ -165,7 +166,9 @@ class AES:
   def set_key(self, key):
     while len(key) < 16 : 
       key += " "
+    if len(key) > 16 : key = key[0:16]
     self.__KEY = key
+    self.key_expansion()
   
   def get_key_scheduling_time(self):
     return self.__key_scheduling_time
@@ -190,7 +193,6 @@ class AES:
     text = ''
     for i in range(len(hex)//2):
       text += BitVector(hexstring=hex[2*i:2*i+2]).get_bitvector_in_ascii()
-      
     return text
 
   def hex_to_matrix(self, hex_value:str) -> List[List[BitVector]]:
@@ -208,7 +210,7 @@ class AES:
     text = ""
     for row in matrix:
       for val in row:
-        text += str.upper(val.get_bitvector_in_hex())
+        text += val.get_bitvector_in_hex()
     return text
 
   def get_key(self, n:int) -> List[BitVector]:
@@ -320,9 +322,25 @@ class AES:
     result = ""
     n = len(plain_text)/16
     for i in range(int(n)):
-      result += self.encrypt_segment(plain_text[i*16:(i+1)*16])
+      segment_result = self.encrypt_segment(plain_text[i*16:(i+1)*16])
+      result += segment_result
     self.__encryption_time = time.time() - self.__encryption_time
     return result
+
+  # def encrypt_file(self, plain_text):
+  #   """ Return encrypted file as ASCII string """
+  #   # self.__encryption_time = time.time()
+  #   while len(plain_text) % 16 !=0:
+  #     plain_text += " "
+  #   result = ""
+  #   n = len(plain_text)//(16*16)
+  #   for i in range(0, n, 1):
+  #     print("E", i*256, i*256+16)
+  #     print("E", i*256, i*256+16)
+  #     result += self.encrypt_segment(plain_text[i*256:i*256+16])
+  #     result += plain_text[i*256+16 : i*256+256]
+  #   result += plain_text[n*256:]
+  #   return result
     
   def decrypt(self, encrypted_text:str) -> str:
     """ Return decrypted plain text in ASCII format """
@@ -331,14 +349,33 @@ class AES:
     n = len(encrypted_text)/(16*2)
     for i in range(int(n)):
       result += self.decrypt_segment(encrypted_text[i*16*2:(i+1)*16*2])
+    bv = BitVector(hexstring=result)
+    result = bv.get_bitvector_in_ascii()
     self.__decryption_time = time.time() - self.__decryption_time
     return result
+
+  # def decrypt_file(self, encrypted_text:str) -> str:
+  #   """ Return decrypted file in ASCII format """
+  #   # self.__decryption_time = time.time()
+  #   result = ""
+  #   n = len(encrypted_text)//(16*16*2)
+  #   for i in range(0, n, 1):
+  #     print("D", i*256*2,i*256*2+16*2)
+  #     result += self.decrypt_segment(encrypted_text[i*256*2:i*256*2+16*2])
+  #     result += encrypted_text[i*256*2+16*2 : i*256*2+256*2]
+  #   result += encrypted_text[n*256*2:]
+  #   # for i in range(int(n)):
+  #   #   if i%32 !=0 : continue
+  #   #   result += self.decrypt_segment(encrypted_text[i*16*2:(i+1)*16*2])
+  #   bv = BitVector(hexstring=result)
+  #   result = bv.get_bitvector_in_ascii()
+  #   # self.__decryption_time = time.time() - self.__decryption_time
+  #   return result
 
   def encrypt_segment(self, plain_text:str) -> str:
     """ Return encrypted text as ASCII string """
     text_hex = self.text_to_hex(plain_text)
     self.create_state_matrix(text_hex)
-    self.key_expansion()
     self.add_round_key(0)
     for i in range(1, TOTAL_ROUND+1):
       self.sub_bytes()
@@ -352,7 +389,6 @@ class AES:
   def decrypt_segment(self, encrypted_text:str) -> None:
     """ Return decrypted plain text in ASCII format """
     self.create_state_matrix(encrypted_text)
-    self.key_expansion()
     self.add_round_key(TOTAL_ROUND)
     for i in reversed(range(0, TOTAL_ROUND)):
       self.inv_shift_row()
@@ -361,9 +397,8 @@ class AES:
       if i!=0:
         self.inv_mix_column()
     transpose(self.__state_matrix)
-    dec_hex = self.hex_matrix_to_text(self.__state_matrix)
-    bv = BitVector(hexstring=dec_hex)
-    return bv.get_bitvector_in_ascii()
+    return self.hex_matrix_to_text(self.__state_matrix)
+    
 
 ##------------------------------------------------------------------##
 ##------------------------- Class Definition -----------------------##
@@ -379,17 +414,20 @@ class AES:
 TESTING = False
 
 if TESTING :
-  PLAIN_TEXT = "Hello!!! Now text can be Encrypt and Decrypt by AES class"
+  PLAIN_TEXT = "ok"
+  KEY = "ok"
   print("Plain text     : " + PLAIN_TEXT)
-  aes_encrypt = AES("Thats my Kung Fu");
+  aes_encrypt = AES(KEY);
   encrypted_text = aes_encrypt.encrypt(PLAIN_TEXT)
   print("Encrypted text : " + encrypted_text)
 
-  aes_decrypt = AES("Thats my Kung Fu");
+  aes_decrypt = AES(KEY)
+  aes_decrypt.set_key(KEY)
   ptext = aes_decrypt.decrypt(encrypted_text)
   print("Decrypted text : " + ptext)
 
-if __name__ == '__main__':
+if __name__ == '__main__': 
+
   aes = AES()
 
   print("Plain Text:")
@@ -404,8 +442,9 @@ if __name__ == '__main__':
   cipher_text = aes.encrypt(plain_text, 16)
   print("\nCipher Text:")
   print(cipher_text, "[In HEX]")
-  print(aes.hex_to_text(cipher_text), "[In ASCII]")
+  # print(aes.hex_to_text(cipher_text), "[In ASCII]")
 
+  aes.set_key(key)
   deciphered_text = aes.decrypt(cipher_text)
   print("\nDeciphered Text:")
   print(aes.text_to_hex(deciphered_text), "[In HEX]")

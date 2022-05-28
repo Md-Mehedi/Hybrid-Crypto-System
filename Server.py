@@ -2,15 +2,22 @@
 ##----------------------------- Imports ----------------------------##
 ##------------------------------------------------------------------##
 
+import base64
+import ntpath
 import os
 import socket
+import sys
+
+from regex import F
 
 from AES import AES
 from RSA import RSA
+from HybridCryptoSystem import Hybrid_Crypto_System
 
 ##------------------------------------------------------------------##
 ##----------------------------- Imports ----------------------------##
 ######################################################################
+
 
 """ This is Sender: ALICE """
 
@@ -21,6 +28,7 @@ from RSA import RSA
 
 BUFFER_SIZE = 4096
 PORT = 12346
+RSA_K = 128
 
 ##------------------------------------------------------------------##
 ##------------------------ Global Definition -----------------------##
@@ -74,60 +82,92 @@ if __name__ == '__main__':
   print()
 
   # Take input of text and AES, RSA initialization
-  PLAIN_TEXT = "Offline r valo lage na"
-  KEY = "Val lage na"
-  aes = AES(KEY)
-  rsa = RSA(16)
+  PLAIN_TEXT = "Two One Nine Two"
+  KEY = "Thats my Kung Fu"
+  
+  while True:
+    print("\n\n-> -> Enter type of encryption : \n1. Text\n2. Other file\n0. Exit")
+    choice = input()
+    send(client, choice)
+    if choice == '0':
+      sys.exit()
+    elif choice == '1' :
+      print("Enter plain text : ")
+      PLAIN_TEXT = input()
+      print("Enter key : ")
+      KEY = input()
+      print()
+    elif choice == '2' :
+      print("Enter file path : ")
+      file_path = input()
+      if os.path.exists(file_path) == False :
+        print("File not found. Try again later with valid file path.")
+        sys.exit()
+      else:
+        with open(file_path, "rb") as file:
+          PLAIN_TEXT = base64.b64encode(file.read()).decode("utf-8") 
+          send(client, ntpath.basename(file_path))  
+      print("Enter key : ")
+      KEY = input()
+    else:
+      print("Wrong choice. Try again later")
+      sys.exit()
 
-  # Encrypting
-  encrypted_text = aes.encrypt(PLAIN_TEXT)
-  encrypted_key = rsa.encrypt(KEY)
-  e, n = rsa.get_public_key()
-  d, n = rsa.get_private_key()
+    # Encrypting
+    hcs = Hybrid_Crypto_System(RSA_K, KEY)
+    print("Encryption started")
+    encrypted_text, encrypted_key = hcs.encrypt(PLAIN_TEXT)
+    # encrypted_text, encrypted_key = hcs.encrypt(PLAIN_TEXT) if choice == '1' else hcs.encrypt_file(PLAIN_TEXT)
+    e, n = hcs.get_public_key()
+    d, n = hcs.get_private_key()
 
-  # Initializing file and folder path
-  dirname = os.path.dirname(__file__)
-  secret_folder_path = dirname + "\\Don't open this"
-  secret_file_path = secret_folder_path + "\\private_key.txt"
-  decrypted_file_path = secret_folder_path + "\\decrypted_text.txt"
+    # Initializing file and folder path
+    dirname = os.path.dirname(__file__)
+    secret_folder_path = dirname + "\\Don't open this"
+    secret_file_path = secret_folder_path + "\\private_key.txt"
+    decrypted_file_path = secret_folder_path + "\\decrypted_text.txt"
 
-  # If secret folder doesn't exist, create one
-  if os.path.exists(secret_folder_path) == False :
-    os.mkdir(secret_folder_path)
+    # If secret folder doesn't exist, create one
+    if os.path.exists(secret_folder_path) == False :
+      os.mkdir(secret_folder_path)
 
-  # Writing private key in a secret file
-  file = open(secret_file_path, 'w+')
-  file.write(str(d) + " " + str(n))
-  file.close()
-
-  print("========== Information About Encryption ==========")
-  print("    Plain text : ", PLAIN_TEXT)
-  print("           Key : ", KEY)
-  print("Encrypted text : ", encrypted_text)
-  print(" Encrypted key : ", encrypted_key)
-  print("          e, n : ", e, n)
-  print("          d, n : ", d, n)
-  print("========== Information About Encryption ==========")
-  print()
-
-  # Sending encrypted text, encrypted key and public key
-  send(client, encrypted_text)
-  send(client, encrypted_key)
-  send(client, e)
-  send(client, n)
-
-  # Checking if decrypted text in client end is correct
-  print("========== Waiting for Bob's decryption... ==========")
-  if recv_ack(client) :
-    file = open(decrypted_file_path, "r")
-    decrypted_text:str = file.readline()
+    # Writing private key in a secret file
+    file = open(secret_file_path, 'w+')
+    file.write(str(d) + " " + str(n))
     file.close()
+
+    print("========== Information About Encryption ==========")
     print("    Plain text : ", PLAIN_TEXT)
-    print("Decrypted text : ", decrypted_text)
-    if decrypted_text == PLAIN_TEXT :
-      print("Encryption is ok")
-    else : 
-      print("Encryption don't ok")
+    print("           Key : ", KEY)
+    print("Encrypted text : ", encrypted_text)
+    print(" Encrypted key : ", encrypted_key)
+    print("          e, n : ", e, n)
+    print("          d, n : ", d, n)
+    print("========== Information About Encryption ==========")
+    print()
+
+    # Sending encrypted text, encrypted key and public key
+    send(client, encrypted_text)
+    send(client, encrypted_key)
+    send(client, e)
+    send(client, n)
+
+    # Checking if decrypted text in client end is correct
+    print("========== Waiting for Bob's decryption... ==========")
+    if choice == '1':
+      if recv_ack(client) :
+        file = open(decrypted_file_path, "r")
+        decrypted_text:str = file.readline()
+        file.close()
+        print("    Plain text : ", PLAIN_TEXT)
+        print("Decrypted text : ", decrypted_text)
+        if str.strip(decrypted_text) == str.strip(PLAIN_TEXT) :
+          print("Encryption is ok")
+        else : 
+          print("Encryption don't ok")
+    elif choice == '2':
+      if recv_ack(client):
+        print("File decrypt at Bob's end successfully")
 
   # Closing server and client
   client.close()
